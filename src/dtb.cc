@@ -21,8 +21,4 @@ namespace dtb {
 
         return true;
     }
-
-    void reader::do_random_stuff() {
-        
-    }
 }

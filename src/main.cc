@@ -53,4 +53,7 @@ int main(int argc, char** argv) {
         printf("    · Size:    %d\n", area.size());
         fflush(stdout);
     });
+
+    printf("Structure Blocks\n");
+    dtb_reader.iterate_over_structure_blocks();
 }
