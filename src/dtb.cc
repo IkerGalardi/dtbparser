@@ -23,7 +23,8 @@ namespace dtb {
     }
 
     char* node_name(structure_node node) {
-        return reinterpret_cast<char*>(node + 1);
+        node++;
+        return reinterpret_cast<char*>(node);
     }
 
     char* prop_name(reader reader, structure_node node) {

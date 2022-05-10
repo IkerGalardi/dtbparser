@@ -55,6 +55,13 @@ namespace dtb {
         uint32_t last_compatible_version() const { return __bswap_32(m_header->last_comp_version); }
         uint32_t boot_cpuid() const { return __bswap_32(m_header->boot_cpuid_phys); }
 
+        structure_node first_structure_node() const { 
+            auto header_ptr = reinterpret_cast<uintptr_t>(m_header);
+            uint32_t* something = reinterpret_cast<uint32_t*>(header_ptr + structure_block_offset());
+
+            return something;
+        }
+
         template<typename function>
         void iterate_over_reserved_areas(function func) {
             auto header_ptr = reinterpret_cast<uintptr_t>(m_header);
@@ -67,44 +74,10 @@ namespace dtb {
                 area_node++;
             }
         }
-
-        template<typename function>
-        void iterate_over_structure_blocks(function func) {
-            auto header_ptr = reinterpret_cast<uintptr_t>(m_header);
-            uint32_t* something = reinterpret_cast<uint32_t*>(header_ptr + structure_block_offset());
-
-            std::string tabs = "";
-
-            while(!is_end(something)) {
-                if(is_begin_node(something)) {
-                    func(something);
-                    something++;
-                    while(*something != '\0') {
-                        something++;
-                    }
-                } else if(is_prop(something)) {
-                    uint32_t property_length = __bswap_32(*(something+1));
-                    uint32_t property_string_offset = __bswap_32(*(something+2));
-                    auto property_pointer = header_ptr + structure_string_offset() + property_string_offset;
-                    printf("%sProperty: name = \"%s\"\n", tabs.c_str(), property_pointer);
-                    
-                    something += property_length / sizeof(uint32_t);
-                } else if(is_end_node(something)) {
-                    tabs.pop_back();
-                    printf("%sEND_NODE\n", tabs.c_str());
-                } else if(is_nop(something)) {
-                    something++;
-                    continue;
-                } 
-
-                something++;
-            }
-        }
     private:
-        uint32_t memory_reservation_map_offset() { return __bswap_32(m_header->off_mem_rsvmap); }
-        uint32_t structure_block_offset() { return __bswap_32(m_header->off_dt_struct); }
-        uint32_t structure_string_offset() { return __bswap_32(m_header->off_dt_strings); }
-
+        uint32_t memory_reservation_map_offset() const { return __bswap_32(m_header->off_mem_rsvmap); }
+        uint32_t structure_block_offset() const { return __bswap_32(m_header->off_dt_struct); }
+        uint32_t structure_string_offset() const { return __bswap_32(m_header->off_dt_strings); }
 
         header* m_header;
 
@@ -113,6 +86,5 @@ namespace dtb {
     };
 
     char* node_name(structure_node node);
-
     char* prop_name(reader reader, structure_node node);
 }

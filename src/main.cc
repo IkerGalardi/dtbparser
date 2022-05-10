@@ -107,16 +107,30 @@ int main(int argc, char** argv) {
 
     if(flags.show_tree_nodes) {
         printf("Structure Blocks:\n");
-        dtb_reader.iterate_over_structure_blocks([&](dtb::structure_node node) {
-            std::string tabs{};
-            if(dtb::is_begin_node(node)) {
-                printf("%sNode: \n", tabs.c_str(), dtb::node_name(node));
-                tabs.push_back('\t');
-            } else if(dtb::is_end_node(node)) {
+        dtb::structure_node something = dtb_reader.first_structure_node();
+
+        std::string tabs = "";
+
+        while(!dtb::is_end(something)) {
+            if(dtb::is_begin_node(something)) {
+                something++;
+                printf("%sNode: %s\n", tabs.c_str(), something);
+                tabs.push_back(' ');
+            } else if(dtb::is_prop(something)) {
+                uint32_t property_length = __bswap_32(*(something+1));
+                uint32_t property_string_offset = __bswap_32(*(something+2));
+                auto property_pointer = dtb::prop_name(dtb_reader, something);
+                printf("%sProperty: name = \"%s\"\n", tabs.c_str(), property_pointer);
+                
+                something += property_length / sizeof(uint32_t)+2;
+            } else if(dtb::is_end_node(something)) {
                 tabs.pop_back();
-            } else if(dtb::is_prop(node)) {
-                printf("%s%s", tabs.c_str(), dtb::prop_name(dtb_reader, node));
+            } else if(dtb::is_nop(something)) {
+                something++;
+                continue;
             } 
-        });
+
+            something++;
+        }
     }
 }
