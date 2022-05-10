@@ -80,7 +80,8 @@ namespace dtb {
 
             while(__bswap_32(*something) != node_type::end()) {
                 if(__bswap_32(*something) == node_type::begin_node()) {
-                    printf("%sBEGIN_NODE: %s\n", tabs.c_str(), something+1);
+                    something++;
+                    printf("%sBEGIN_NODE: %s\n", tabs.c_str(), something);
                     tabs.push_back(' ');
                 } else if(__bswap_32(*something) == node_type::prop()) {
                     something++;
@@ -89,15 +90,15 @@ namespace dtb {
                     uint32_t property_string_offset = __bswap_32(*something);
                     auto property_pointer = header_ptr + structure_string_offset() + property_string_offset;
                     printf("%sProperty: name = \"%s\"\n", tabs.c_str(), property_pointer);
+                    
+                    something += property_length / sizeof(uint32_t);
                 } else if(__bswap_32(*something) == node_type::end_node()) {
                     tabs.pop_back();
                     printf("%sEND_NODE\n", tabs.c_str());
                 } else if(__bswap_32(*something) == node_type::nop()) {
                     something++;
                     continue;
-                } else {
-                    printf("%sUNKNOWN\n", tabs.c_str());
-                }
+                } 
 
                 something++;
             }
@@ -106,5 +107,8 @@ namespace dtb {
         }
 
         header* m_header;
+
+        uint32_t* cpu_node_pointer = nullptr;
+        uint32_t* memory_node_pointer = nullptr;
     };
 }
