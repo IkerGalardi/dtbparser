@@ -73,12 +73,18 @@ parser_flags get_flags(int argc, char** argv) {
 int main(int argc, char** argv) {
     auto flags = get_flags(argc, argv);
 
+    // If no file argument has been passed, then print an error message and quit.
+    if(optind <= argc) {
+        print_helpfull_error_message();
+        std::exit(1);
+    }
+
     auto mapped_dtb = read_file(argv[optind]);
 
     dtb::reader dtb_reader{mapped_dtb.data};
     if(!dtb_reader.ok()) {
         fprintf(stderr, "dtbparser: File %s is not a correct DTB file.\n", argv[optind]);
-        std::exit(1);
+        std::exit(2);
     }
 
     // Print important information about the header
