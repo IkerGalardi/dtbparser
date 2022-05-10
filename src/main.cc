@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     auto flags = get_flags(argc, argv);
 
     // If no file argument has been passed, then print an error message and quit.
-    if(optind <= argc) {
+    if(optind >= argc) {
         print_helpfull_error_message();
         std::exit(1);
     }
@@ -106,7 +106,17 @@ int main(int argc, char** argv) {
     }
 
     if(flags.show_tree_nodes) {
-        printf("Structure Blocks\n");
-        dtb_reader.iterate_over_structure_blocks();
+        printf("Structure Blocks:\n");
+        dtb_reader.iterate_over_structure_blocks([&](dtb::structure_node node) {
+            std::string tabs{};
+            if(dtb::is_begin_node(node)) {
+                printf("%sNode: \n", tabs.c_str(), dtb::node_name(node));
+                tabs.push_back('\t');
+            } else if(dtb::is_end_node(node)) {
+                tabs.pop_back();
+            } else if(dtb::is_prop(node)) {
+                printf("%s%s", tabs.c_str(), dtb::prop_name(dtb_reader, node));
+            } 
+        });
     }
 }

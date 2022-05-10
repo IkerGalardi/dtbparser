@@ -9,13 +9,13 @@
 namespace dtb {
     constexpr uint32_t magic_number = 0xd00dfeed;
 
-    namespace node_type {
-        static uint32_t begin_node() { return 0x00000001; }
-        static uint32_t end_node()   { return 0x00000002; }
-        static uint32_t prop()       { return 0x00000003; }
-        static uint32_t nop()        { return 0x00000004; }
-        static uint32_t end()        { return 0x00000009; }
-    };
+    typedef uint32_t* structure_node;
+
+    static uint32_t is_begin_node(structure_node node) { return __bswap_32(*node) == 0x00000001; }
+    static uint32_t is_end_node(structure_node node)   { return __bswap_32(*node) == 0x00000002; }
+    static uint32_t is_prop(structure_node node)       { return __bswap_32(*node) == 0x00000003; }
+    static uint32_t is_nop(structure_node node)        { return __bswap_32(*node) == 0x00000004; }
+    static uint32_t is_end(structure_node node)        { return __bswap_32(*node) == 0x00000009; }
 
     struct header {
         uint32_t magic;
@@ -41,8 +41,9 @@ namespace dtb {
         uint64_t m_size;
     };
 
+
     class reader {
-        friend int main(int, char**);
+        friend char* prop_name(reader reader, structure_node node);
     public:
         reader() = delete;
         reader(void* ptr);
@@ -66,49 +67,52 @@ namespace dtb {
                 area_node++;
             }
         }
-    private:
-        uint32_t memory_reservation_map_offset() { return __bswap_32(m_header->off_mem_rsvmap); }
-        uint32_t structure_block_offset() { return __bswap_32(m_header->off_dt_struct); }
-        uint32_t structure_string_offset() { return __bswap_32(m_header->off_dt_strings); }
 
-    public:
-        void iterate_over_structure_blocks() {
+        template<typename function>
+        void iterate_over_structure_blocks(function func) {
             auto header_ptr = reinterpret_cast<uintptr_t>(m_header);
             uint32_t* something = reinterpret_cast<uint32_t*>(header_ptr + structure_block_offset());
 
             std::string tabs = "";
 
-            while(__bswap_32(*something) != node_type::end()) {
-                if(__bswap_32(*something) == node_type::begin_node()) {
+            while(!is_end(something)) {
+                if(is_begin_node(something)) {
+                    func(something);
                     something++;
-                    printf("%sBEGIN_NODE: %s\n", tabs.c_str(), something);
-                    tabs.push_back(' ');
-                } else if(__bswap_32(*something) == node_type::prop()) {
-                    something++;
-                    uint32_t property_length = __bswap_32(*something);
-                    something++;
-                    uint32_t property_string_offset = __bswap_32(*something);
+                    while(*something != '\0') {
+                        something++;
+                    }
+                } else if(is_prop(something)) {
+                    uint32_t property_length = __bswap_32(*(something+1));
+                    uint32_t property_string_offset = __bswap_32(*(something+2));
                     auto property_pointer = header_ptr + structure_string_offset() + property_string_offset;
                     printf("%sProperty: name = \"%s\"\n", tabs.c_str(), property_pointer);
                     
                     something += property_length / sizeof(uint32_t);
-                } else if(__bswap_32(*something) == node_type::end_node()) {
+                } else if(is_end_node(something)) {
                     tabs.pop_back();
                     printf("%sEND_NODE\n", tabs.c_str());
-                } else if(__bswap_32(*something) == node_type::nop()) {
+                } else if(is_nop(something)) {
                     something++;
                     continue;
                 } 
 
                 something++;
             }
-
-            printf("END\n");
         }
+    private:
+        uint32_t memory_reservation_map_offset() { return __bswap_32(m_header->off_mem_rsvmap); }
+        uint32_t structure_block_offset() { return __bswap_32(m_header->off_dt_struct); }
+        uint32_t structure_string_offset() { return __bswap_32(m_header->off_dt_strings); }
+
 
         header* m_header;
 
         uint32_t* cpu_node_pointer = nullptr;
         uint32_t* memory_node_pointer = nullptr;
     };
+
+    char* node_name(structure_node node);
+
+    char* prop_name(reader reader, structure_node node);
 }
